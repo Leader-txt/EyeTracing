@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,5 +10,10 @@
   <ItemGroup>
     <PackageReference Include="OpenCvSharp4.Windows" Version="4.6.0.20220608" />
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	  <Copy SourceFiles="..\model\haarcascade_frontalface_default.xml" DestinationFolder="$(OutputPath)"/>
+	  <Copy SourceFiles="..\model\haarcascade_eye_tree_eyeglasses.xml" DestinationFolder="$(OutputPath)"/>
+  </Target>
 
 </Project>
