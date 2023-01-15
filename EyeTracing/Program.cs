@@ -4,13 +4,8 @@ namespace EyeTracing
 {
     public class Program
     {
-        public delegate void Fuck(string who);
-        public static event Fuck Fucking;
         public static void Main(string[] args)
         {
-            Fucking += (who) => { Console.WriteLine("xml is fucked by " + who); };
-            Fucking("A dog");
-            return;
             var screen = Utils.WorkingArea;
             int stay = 10;
             int speed = 10;
@@ -19,9 +14,10 @@ namespace EyeTracing
             var Cursor_y = screen.Height / 2;
             bool LeftDown = false;
             bool RightDown = false;
+            var faceRectQue = new Queue<Rect>(5);
             VideoCapture capture = new VideoCapture(0);
-            //using(Window head=new Window("Head"))
-            //using (Window window = new Window("Camera"))
+            using (Window head = new Window("Head"))
+            using (Window window = new Window("Camera"))
             using (Mat image = new Mat()) // Frame image buffer
             {
                 // When the movie playback reaches end, Mat.data becomes NULL.
@@ -36,13 +32,19 @@ namespace EyeTracing
                     var face_match = haarCascade.DetectMultiScale(image_g);
                     if (face_match.Any())
                     {
-                        var face_pos = face_match[0];
-                        var face_x = face_pos.X + face_pos.Width / 2;
-                        var face_y = face_pos.Y + face_pos.Height / 2;
+                        faceRectQue.Enqueue(face_match[0]);
+                        if (faceRectQue.Count > 5)
+                        {
+                            faceRectQue.Dequeue();
+                        }
+                        var faceRect = new Rect(faceRectQue.Select(x => x.X).Sum() / faceRectQue.Count, faceRectQue.Select(x => x.Y).Sum() / faceRectQue.Count
+                            , faceRectQue.Select(x => x.Width).Sum() / faceRectQue.Count, faceRectQue.Select(x => x.Height).Sum() / faceRectQue.Count);
+                        var face_x = faceRect.X + faceRect.Width / 2;
+                        var face_y = faceRect.Y + faceRect.Height / 2;
                         ///###
                         ///#+#
                         ///###
-                        if (face_x - image.Width / 2 > stay)
+                        /*if (face_x - image.Width / 2 > stay)
                         {
                             Cursor_x -= speed;
                         }
@@ -58,16 +60,39 @@ namespace EyeTracing
                         {
                             Cursor_y -= speed;
                         }
+                        Utils.SetCursorPos(Cursor_x, Cursor_y);*/
+                        int curx = screen.Width / 2 - speed * (face_x - image.Width / 2);
+                        int cury = screen.Height / 2 + speed * (face_y - image.Height / 2);
+                        if (curx > Cursor_x)
+                        {
+                            Cursor_x += 5;
+                        }
+                        else if (curx < Cursor_x)
+                        {
+                            Cursor_x -= 5;
+                        }
+                        if (cury > Cursor_y)
+                        {
+                            Cursor_y += 5;
+                        }
+                        else if (cury < Cursor_y)
+                        {
+                            Cursor_y -= 5;
+                        }
+                        //Console.WriteLine(curx+","+ cury);
                         Utils.SetCursorPos(Cursor_x, Cursor_y);
-                        image.Rectangle(face_match[0], Scalar.Red, 3);
-                        var face = new Mat(image_g, face_match[0]);
+                        image.Rectangle(faceRect, Scalar.Red, 3);
+                        var face = new Mat(image_g, faceRect);
                         haarCascade = new CascadeClassifier("haarcascade_eye_tree_eyeglasses.xml");
-                        Rect[] eyes = haarCascade.DetectMultiScale(
-                                            face, 1.2, 2, HaarDetectionTypes.ScaleImage, new Size(30, 30));
+                        Rect[] eyes = haarCascade.DetectMultiScale(face);
+                        foreach (var rect in eyes)
+                        {
+                            face.Rectangle(rect, Scalar.Red, 3);
+                        }
                         if (eyes.Length == 1 && !LeftDown)
                         {
                             //左键
-                            Utils.mouse_event(MouseEventFlag.LeftDown, Cursor_x, Cursor_y, 0, UIntPtr.Zero);
+                            //Utils.mouse_event(MouseEventFlag.LeftDown, Cursor_x, Cursor_y, 0, UIntPtr.Zero);
                             LeftDown = true;
                         }
                         if (eyes.Length == 2)
@@ -76,23 +101,23 @@ namespace EyeTracing
                             if (LeftDown)
                             {
                                 LeftDown = false;
-                                Utils.mouse_event(MouseEventFlag.LeftUp, Cursor_x, Cursor_y, 0, UIntPtr.Zero);
+                                //Utils.mouse_event(MouseEventFlag.LeftUp, Cursor_x, Cursor_y, 0, UIntPtr.Zero);
                             }
                             //右键抬起
                             if (RightDown)
                             {
                                 RightDown = false;
-                                Utils.mouse_event(MouseEventFlag.RightUp, Cursor_x, Cursor_y, 0, UIntPtr.Zero);
+                                //Utils.mouse_event(MouseEventFlag.RightUp, Cursor_x, Cursor_y, 0, UIntPtr.Zero);
                             }
                         }
                         if (eyes.Length == 0 && !RightDown)
                         {
                             RightDown = true;
-                            Utils.mouse_event(MouseEventFlag.RightDown, Cursor_x, Cursor_y, 0, UIntPtr.Zero);
+                            //Utils.mouse_event(MouseEventFlag.RightDown, Cursor_x, Cursor_y, 0, UIntPtr.Zero);
                         }
-                        //head.ShowImage(face);
+                        head.ShowImage(face);
                     }
-                    //window.ShowImage(image);
+                    window.ShowImage(image);
                     Cv2.WaitKey(30);
                 }
             }
